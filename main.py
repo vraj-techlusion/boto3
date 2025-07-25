@@ -19,18 +19,23 @@ s3 = session.client("s3")
 
 def send_notification(to_email: str, filename: str, presigned_url: str):
     url = f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages"
-    resp = requests.post(
-        url,
-        auth=("api", MAILGUN_API_KEY),
-        data={
-            "from": NOTIFY_FROM,
-            "to": to_email,
-            "subject": "Your file is ready",
-            "text": f"File uploaded. Download here: {presigned_url}",
-            "html": f"<p>Your file <strong>{filename}</strong> is available <a href='{presigned_url}'>here</a>.</p>"
-        }
-    )
-    resp.raise_for_status()
+    try:
+        resp = requests.post(
+            url,
+            auth=("api", MAILGUN_API_KEY),
+            data={
+                "from": NOTIFY_FROM,
+                "to": to_email,
+                "subject": "Your file is ready",
+                "text": f"File uploaded. Download here: {presigned_url}",
+                "html": f"<p>Your file <strong>{filename}</strong> is available <a href='{presigned_url}'>here</a>.</p>"
+            }
+        )
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        print(f"[MAILGUN ERROR] Status: {resp.status_code}")
+        print(f"[MAILGUN ERROR] Response: {resp.text}")
+        raise e
 
 @app.post("/upload/")
 async def upload(file: UploadFile = File(...), notify_email: str = None):
